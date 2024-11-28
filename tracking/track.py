@@ -111,16 +111,27 @@ def run(args):
     # store custom args in predictor
     yolo.predictor.custom_args = args
 
+    # Fix in order to avoid strongsort crashing with --show argument when running tracking script
     for r in results:
+        # Debugging: Print the raw results
+        print("Raw prediction results:", r.boxes)
 
-        img = yolo.predictor.trackers[0].plot_results(r.orig_img, args.show_trajectories)
+        if hasattr(yolo.predictor.trackers[0], 'plot_results'):
+            img = yolo.predictor.trackers[0].plot_results(r.orig_img, args.show_trajectories)
+        else:
+            print("Tracker does not support plot_results, skipping visualization.")
+            img = r.orig_img  # Just pass the original image without annotations
 
-        if args.show is True:
-            cv2.imshow('BoxMOT', img)     
-            key = cv2.waitKey(1) & 0xFF
-            if key == ord(' ') or key == ord('q'):
-                break
-
+        # Check if `--show` is enabled and handle gracefully
+        if args.show:
+            try:
+                cv2.imshow('BoxMOT', img)
+                key = cv2.waitKey(1) & 0xFF
+                if key == ord(' ') or key == ord('q'):  # Space or 'q' to exit
+                    break
+            except Exception as e:
+                print(f"Error displaying image with `--show`: {e}")
+                args.show = False  # Disable `--show` to avoid further issues
 
 def parse_opt():
     
